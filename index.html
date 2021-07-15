@@ -5,7 +5,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.2.6/gsap.min.js"></script>
 </head>
 
-<body>
+<body onload="load()">
     <object data="checkersboard.svg" type="image/svg+xml" id="svgdoc" width="900" height="700"></object>
     <audio id="movesound" src="movesound.wav"></audio>
 </body>
@@ -277,7 +277,7 @@
 
     }
 
-    load();
+    
 
     //megnezi a matrixot es eltunteti a leutott babukat
     function check_pieces() {
