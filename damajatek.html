@@ -1,0 +1,338 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.2.6/gsap.min.js"></script>
+</head>
+
+<body>
+    <object data="checkersboard.svg" type="image/svg+xml" id="svgdoc" width="900" height="700"></object>
+    <audio id="movesound" src="movesound.wav"></audio>
+</body>
+
+<script>
+
+    var board = [
+        [0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 2, 0, 2, 0, 2, 0, 2],
+        [2, 0, 2, 0, 2, 0, 2, 0],
+    ], boardText = '';
+    var currentid;  // az aktualisan kijelolt babu handlerjenek az ID-je
+    var whitecount = 8;
+    var greycount = 8;
+    var whiteturn = true;
+    var start_cx;   // a babu eltolasanak kezdeti pozicioja
+    var start_cy;
+    var dest_cx;  // a babu eltolasanak vegpozicioja
+    var dest_cy;
+    currentpos = { row: 0, col: 0 }; //az aktualisan kijelolt babu pozicioja
+    class Piece {
+        constructor(handle, row, col, id) {
+            this.id = id;
+            this.handle = handle;
+            this.row = row;
+            this.col = col;
+            this.queen = false;
+            this.trf;
+            this.piece = handle.getBoundingClientRect();
+            this.pt = svg.createSVGPoint();
+            this.handle.onclick = this.mousepress.bind(this);
+        }
+
+        mousepress() {
+            console.log(`row:${this.row}, col:${this.col}`);
+            currentid = this.id;
+            currentpos.row = this.row;
+            currentpos.col = this.col;
+            start_cx = this.piece.left + this.piece.width * 0.5;
+            start_cy = this.piece.top + this.piece.height * 0.5;
+        }
+
+        printpos() {
+            console.log(`printpos, row: ${this.row}, col:${this.col}`);
+
+        }
+
+        movepiece() {
+            this.pt.x = dest_cx - start_cx;
+            this.pt.y = dest_cy - start_cy + 32;
+            this.trf = this.pt.matrixTransform(svg.getScreenCTM().inverse());
+
+            gsap.to(this.handle, { duration: 0.5, x: this.trf.x, y: this.trf.y, oncomplete: function () { movesound.play() } });
+            //this.handle.setAttribute("transform",`translate(${this.trf.x},${this.trf.y})`);
+        }
+        changepos(dest_row, dest_col) {
+            board[dest_row][dest_col] = board[this.row][this.col];
+            board[this.row][this.col] = 0;
+            this.row = dest_row;
+            this.col = dest_col;
+
+        }
+        hidepiece() {
+            this.handle.setAttribute("style", "display:none;opacity:1;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.3023622;stroke-opacity:1");
+
+        }
+        makequeen() {
+            console.log("makequeen");
+            this.handle.style.stroke = "red";
+        }
+
+    }
+
+    class Field {
+        constructor(handle, row, col) {
+            this.handle = handle;
+            this.row = row;
+            this.col = col;
+            this.field = handle.getBoundingClientRect();
+
+            this.handle.onclick = this.fieldpress.bind(this);
+        }
+        legalmove() {
+            if (whiteturn) {
+                //lepes ellenorzese feher babura
+                if (board[this.row][this.col] == 0 && currentpos.row - 1 == this.row && (currentpos.col - 1 == this.col || currentpos.col + 1 == this.col)) {
+                    return 1;
+                }
+                //lepes ellenorzese feher damara
+                if (handle[currentid].queen && board[this.row][this.col] == 0 && currentpos.row + 1 == this.row && (currentpos.col - 1 == this.col || currentpos.col + 1 == this.col)) {
+                    return 1;
+
+                }
+                else {
+                    //utes ellenorzese feher babura
+                    if (board[this.row][this.col] == 0 && currentpos.row - 2 == this.row) {
+                        if (currentpos.col - 2 == this.col && board[this.row + 1][this.col + 1] == 1) {
+                            board[this.row + 1][this.col + 1] = 0;
+                            greycount--;
+                            return 1;
+                        }
+                        if (currentpos.col + 2 == this.col && board[this.row + 1][this.col - 1] == 1) {
+                            board[this.row + 1][this.col - 1] = 0;
+                            greycount--;
+                            return 1;
+
+                        }
+
+
+                    }
+                    //utes ellenorzese feher damara
+                    if (handle[currentid].queen && board[this.row][this.col] == 0 && currentpos.row + 2 == this.row) {
+                        if (currentpos.col - 2 == this.col && board[this.row - 1][this.col + 1] == 1) {
+                            board[this.row - 1][this.col + 1] = 0;
+                            greycount--;
+                            return 1;
+                        }
+                        if (currentpos.col + 2 == this.col && board[this.row - 1][this.col - 1] == 1) {
+                            board[this.row - 1][this.col - 1] = 0;
+                            greycount--;
+                            return 1;
+
+                        }
+
+
+                    }
+
+                }
+            }
+
+            else {
+                //lepes ellenorzese szurke babura
+                if (board[this.row][this.col] == 0 && currentpos.row + 1 == this.row && (currentpos.col - 1 == this.col || currentpos.col + 1 == this.col)) {
+                    return 1;
+                }
+                //lepes ellenorzese szurke damara
+                if (handle[currentid].queen && board[this.row][this.col] == 0 && currentpos.row - 1 == this.row && (currentpos.col - 1 == this.col || currentpos.col + 1 == this.col)) {
+                    return 1;
+                }
+                else {
+                    //utes ellenorzese szurke babura
+                    if (board[this.row][this.col] == 0 && currentpos.row + 2 == this.row) {
+                        if (currentpos.col - 2 == this.col && board[this.row - 1][this.col + 1] == 2) {
+                            board[this.row - 1][this.col + 1] = 0;
+                            whitecount--;
+                            return 1;
+
+                        }
+                        if (currentpos.col + 2 == this.col && board[this.row - 1][this.col - 1] == 2) {
+                            board[this.row - 1][this.col - 1] = 0;
+                            whitecount--;
+                            return 1;
+
+                        }
+
+
+                    }
+                    //utes ellenorzese szurke damara
+                    if (handle[currentid].queen && board[this.row][this.col] == 0 && currentpos.row - 2 == this.row) {
+                        if (currentpos.col - 2 == this.col && board[this.row + 1][this.col + 1] == 2) {
+                            board[this.row + 1][this.col + 1] = 0;
+                            whitecount--;
+                            return 1;
+
+                        }
+                        if (currentpos.col + 2 == this.col && board[this.row + 1][this.col - 1] == 2) {
+                            board[this.row + 1][this.col - 1] = 0;
+                            whitecount--;
+                            return 1;
+
+                        }
+
+
+                    }
+
+                }
+            }
+        }
+        fieldpress() {
+            if ((whiteturn && currentid < 8 && this.legalmove()) || (!whiteturn && currentid >= 8 && this.legalmove())) {
+                console.log(`row:${this.row}, col:${this.col}`);
+                //console.log(`currentpos: ${currentpos.row} ${currentpos.col}`);
+                handle[currentid].printpos();
+                dest_cx = this.field.left + this.field.width * 0.5;
+                dest_cy = this.field.top + this.field.height * 0.5;
+                handle[currentid].movepiece();
+                handle[currentid].changepos(this.row, this.col);
+                check_pieces();
+                check_queens();
+                update_state();
+                showboard();
+
+                whiteturn = !whiteturn;
+                if (!whiteturn) {
+                    turn.textContent = 'PLAYER "B" TURN';
+                }
+                else {
+                    turn.textContent = 'PLAYER "A" TURN';
+                }
+            }
+
+
+        }
+
+    }
+
+
+    var svg;
+    var turn;
+    var movesound;
+    var whitestate;
+    var greystate;
+    var newgamebutton;
+    var white = new Array();
+    var grey = new Array();
+    //var whitehandle=new Array();
+    //var greyhandle=new Array();
+    var handle = new Array();
+    var field = new Array();
+    var fieldhandle = new Array();
+
+    function load() {
+        var svgdoc = document.getElementById("svgdoc").contentDocument;
+        if (svgdoc == null) {
+            setTimeout(load, 100);
+            return;
+        }
+        svg = svgdoc.getElementById("svg8");
+        turn = svgdoc.getElementById("turn");
+        whitestate = svgdoc.getElementById("whitestate");
+        greystate = svgdoc.getElementById("greystate");
+        movesound = document.getElementById("movesound");
+        newgamebutton = svgdoc.getElementById("newgamebutton");
+        newgamebutton.onclick = refresh;
+
+
+        //a babuk kezdeti sor/oszlopbeli poziciojanak inicializalasa
+        var greyrow = [0, 0, 0, 0, 1, 1, 1, 1];
+        var greycol = [1, 3, 5, 7, 0, 2, 4, 6];
+        var whiterow = [7, 7, 7, 7, 6, 6, 6, 6];
+        var whitecol = [0, 2, 4, 6, 1, 3, 5, 7];
+
+        //a babuk handlerjeinek betoltese
+        var i;
+        for (i = 0; i < 8; i++) {
+            white[i] = svgdoc.getElementById(`white${i}`);
+            grey[i] = svgdoc.getElementById(`grey${i}`);
+            handle[i] = new Piece(white[i], whiterow[i], whitecol[i], i);
+            handle[i + 8] = new Piece(grey[i], greyrow[i], greycol[i], i + 8);
+
+
+        }
+        //a mezok handlerjeinek betoltese
+        var k = 1;
+        for (i = 0; i < 8; i++) {
+            for (j = 0; j < 8; j++) {
+                field[k - 1] = svgdoc.getElementById(`${k}`);
+                fieldhandle[k - 1] = new Field(field[k - 1], i, j);
+                k++;
+            }
+
+
+        }
+
+    }
+
+    load();
+
+    //megnezi a matrixot es eltunteti a leutott babukat
+    function check_pieces() {
+        for (i = 0; i < 16; i++) {
+            if (board[handle[i].row][handle[i].col] == 0)
+                handle[i].hidepiece();
+
+        }
+
+    }
+    //ha valamelyik babu beert az ellenfel leghatso soraba damava teszi
+    function check_queens() {
+        for (i = 0; i < 8; i++) {
+            if (handle[i].row == 0) {
+                handle[i].queen = true;
+                handle[i].makequeen();
+            }
+
+        }
+        for (i = 8; i < 16; i++) {
+            if (handle[i].row == 7) {
+                handle[i].queen = true;
+                handle[i].makequeen();
+
+            }
+        }
+
+    }
+    //kiirja a konzolba a tabla elemeit
+    function showboard() {
+        for (var i = 0; i < 8; i++) {
+            for (var j = 0; j < 8; j++) {
+                boardText += board[i][j] + ' ';
+            }
+            console.log(boardText);
+            boardText = '';
+        }
+    }
+    //szamon tartja a babuk szamat
+    function update_state() {
+        whitestate.textContent = `${whitecount}`;
+        greystate.textContent = `${greycount}`;
+        if (whitecount == 0) {
+            alert('PLAYER "B" WON!')
+        }
+        if (greycount == 0) {
+            alert('PLAYER "A" WON!')
+        }
+
+    }
+    function refresh() {
+        location.reload();
+    }
+
+
+</script>
+
+</html>
